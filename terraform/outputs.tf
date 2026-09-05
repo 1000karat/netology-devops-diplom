@@ -1,6 +1,6 @@
-output "external_ip_address" {
-  description = "External NAT IP address"
-  value       = yandex_compute_instance.vm.network_interface[0].nat_ip_address
+output "ansible_inventory" {
+  description = "Path to generated Ansible inventory"
+  value       = local_file.ansible_inventory.filename
 }
 
 output "ssh_connection_command" {

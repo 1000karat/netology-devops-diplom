@@ -1,0 +1,94 @@
+---
+- name: Install Docker and Docker Compose on Ubuntu
+  hosts: all
+  become: true
+
+  vars:
+    docker_packages:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+
+  tasks:
+
+    - name: 1. Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: 2. Install prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+
+    - name: 3. Create Docker keyrings directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: 4. Download Docker GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: 5. Add Docker repository
+      ansible.builtin.deb822_repository:
+        name: docker
+        types: deb
+        uris: https://download.docker.com/linux/ubuntu
+        suites: "{{ ansible_facts['distribution_release'] }}"
+        components:
+          - stable
+        architectures:
+          - "{{ ansible_facts['architecture'] | replace('x86_64', 'amd64') }}"
+        signed_by: /etc/apt/keyrings/docker.asc
+        state: present
+        enabled: true
+
+    - name: 6. Update apt cache after adding Docker repository
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: 7. Install Docker packages
+      ansible.builtin.apt:
+        name: "{{ docker_packages }}"
+        state: present
+
+    - name: 8. Enable and start Docker service
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: 9. Add remote user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+    - name: 10. Check Docker version
+      ansible.builtin.command:
+        cmd: docker version
+      register: docker_version
+      changed_when: false
+
+    - name: 11. Show Docker version
+      ansible.builtin.debug:
+        var: docker_version.stdout_lines
+
+    - name: 12. Run Docker hello-world container
+      ansible.builtin.command:
+        cmd: docker run --rm hello-world
+      register: docker_test
+      changed_when: false
+
+    - name: 13. Show Docker test result
+      ansible.builtin.debug:
+        var: docker_test.stdout_lines
