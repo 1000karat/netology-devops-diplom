@@ -1,0 +1,9 @@
+.terraform/
+backup/
+terraform/terraform.tfvars
+terraform/*.auto.tfvars
+*.tfstate
+*.tfstate.*
+crash.log
+authorized_key.json
+s3.env
